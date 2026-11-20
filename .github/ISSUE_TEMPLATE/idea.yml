@@ -1,0 +1,11 @@
+name: Idea o ángulo nuevo
+description: Un ángulo que falta, una regla que debería revisar siempre, o una mejora
+labels: [idea]
+body:
+  - type: textarea
+    id: que
+    attributes: { label: Qué propondrías, description: "Si es un ángulo: qué rol, qué mira y cómo lo comprueba" }
+    validations: { required: true }
+  - type: textarea
+    id: porque
+    attributes: { label: Qué se escapó sin esto }

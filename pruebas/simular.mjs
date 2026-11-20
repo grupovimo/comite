@@ -46,7 +46,7 @@ const MAPA = {
 }
 const hallazgo = (o = {}) => ({ titulo: 'h', severidad: 'media', area: 'backend', donde: 'api/a.go:1', problema: 'p', evidencia: 'e', capturas: [], arreglo: 'a', tocaDecisionProtegida: false, ...o })
 
-async function correr(nombre, args, { mapa = {}, responder = () => undefined } = {}) {
+async function correr(nombre, args, { mapa = {}, responder = () => undefined, presupuesto = null } = {}) {
   const { fn, meta } = cargar(nombre)
   const etiquetas = [], fases = new Set(), giro = { n: 0 }
   const agent = async (prompt, o = {}) => {
@@ -58,7 +58,7 @@ async function correr(nombre, args, { mapa = {}, responder = () => undefined } =
     if (propia instanceof Error) throw propia
     if (propia !== undefined) return propia
     if (!o.schema) return '/ruta/informe.md'
-    if (o.label === 'mapa') return { ...MAPA, ...mapa }
+    if (o.label === 'mapa' || o.label === 'mapa:reintento') return { ...MAPA, ...mapa }
     if (o.label === 'levantar') return { ok: true, url: 'http://localhost:4100', cuentas: 'a@b', pantallas: ['inicio'], comoBajar: 'docker compose down', detalle: '' }
     if (o.label === 'pruebas-base') return { corrieron: true, verdes: true, salida: 'ok' }
     return falso(o.schema, giro)
@@ -71,7 +71,7 @@ async function correr(nombre, args, { mapa = {}, responder = () => undefined } =
   }))
   const phase = t => fases.add(t)
   let res, error
-  try { res = await fn(args, agent, parallel, pipeline, phase, () => {}, { total: null, spent: () => 0, remaining: () => Infinity }) } catch (e) { error = e }
+  try { res = await fn(args, agent, parallel, pipeline, phase, () => {}, presupuesto || { total: null, spent: () => 0, remaining: () => Infinity }) } catch (e) { error = e }
   const titulos = new Set(meta.phases.map(p => p.title))
   for (const f of fases) assert.ok(titulos.has(f), `${nombre}: la fase «${f}» no está en meta.phases`)
   return { res, etiquetas, error }
@@ -188,6 +188,34 @@ caso('revision: tope de hallazgos por ángulo, lotes para media y baja, área po
   assert.ok(res.noArreglados.some(h => h.severidad === 'bloqueante'), 'un escéptico que critica el arreglo no mata el hallazgo')
 })
 
+// Peor caso: cada ángulo devuelve el máximo de hallazgos, todos bloqueantes y distintos.
+const peorCaso = (l, s, prompt) => {
+  const m = prompt.match(/como máximo (\d+) hallazgos/)
+  if (l.startsWith('comité:')) return { findings: Array.from({ length: Number(m[1]) }, (_, i) => hallazgo({ titulo: l + i, severidad: 'bloqueante', area: ['datos', 'backend', 'web', 'apps', 'contenido', 'infra'][i % 6] })) }
+  if (l === 'deduplicar') return { hallazgos: JSON.parse(prompt.slice(prompt.indexOf('['))), conflictos: [] }
+  if (l.startsWith('verifica:')) return { existe: true, motivo: 'm', severidad: 'bloqueante', arregloOk: true, arregloCorregido: 'a' }
+  if (l.startsWith('control:')) return { encontrados: [{ titulo: 'x', severidad: 'bloqueante', corregido: false, detalle: 'd' }], pruebasCorrieron: true, pruebasVerdes: false, pruebas: 'rojo' }
+}
+for (const [escala, tope] of [['rapida', 25], ['media', 55], ['completa', 105]]) {
+  caso(`revision ${escala}: el peor caso no pasa de ${tope} agentes (el máximo publicado)`, async () => {
+    const { etiquetas } = sinError(await correr('revision.js', { carpeta: '/r', fecha, escala }, { responder: peorCaso }))
+    assert.ok(etiquetas.length <= tope, `usó ${etiquetas.length}`)
+    if (process.env.VER) console.log(`      ${escala}: ${etiquetas.length} agentes`)
+  })
+}
+
+caso('revision: con el presupuesto corto todo se verifica en lote', async () => {
+  const { etiquetas } = sinError(await correr('revision.js', { carpeta: '/r', fecha }, { responder: peorCaso, presupuesto: { total: 1e6, spent: () => 9e5, remaining: () => 1e5 } }))
+  assert.equal(cuenta(etiquetas, 'verifica:'), 0)
+  assert.ok(cuenta(etiquetas, 'verifica-lote') >= 1)
+})
+
+caso('revision: si el mapa no devuelve nada se reintenta una vez', async () => {
+  let veces = 0
+  const { etiquetas } = sinError(await correr('revision.js', { carpeta: '/r', fecha, escala: 'rapida' }, { responder: l => l === 'mapa' && !veces++ ? null : undefined }))
+  assert.ok(etiquetas.includes('mapa:reintento'))
+})
+
 caso('revision media: el hallazgo de un .swift lo arregla el área apps', async () => {
   const { etiquetas } = sinError(await correr('revision.js', { carpeta: '/r', fecha }, {
     responder: (l, s, prompt) => {
@@ -232,6 +260,12 @@ caso('plan media con carpeta escribe informe', async () => {
   assert.equal(cuenta(etiquetas, 'plan:'), 8)
   assert.equal(etiquetas.at(-1), 'informe')
   assert.equal(res.informe, '/r/.comite/informes/2026-01-01-checkout-plan.md')
+})
+
+caso('plan: si el juez no devuelve nada se reintenta una vez', async () => {
+  let veces = 0
+  const { res, etiquetas } = sinError(await correr('plan.js', { plan: 'x', fecha, escala: 'rapida' }, { responder: l => l === 'juez' && !veces++ ? null : undefined }))
+  assert.ok(etiquetas.includes('juez:reintento') && res.veredicto)
 })
 
 caso('plan completa suma el contrajuez', async () => {

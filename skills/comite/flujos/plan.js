@@ -29,6 +29,7 @@ const INFORMES = A.informes || (WT ? WT + '/.comite/informes' : null)
 const INFORME = INFORMES ? `${INFORMES}/${A.fecha}${ETIQUETA}-plan.md` : null
 const gasto = {}
 const ag = (prompt, o) => { gasto[o.phase] = (gasto[o.phase] || 0) + 1; return agent(prompt, o) }
+const agFirme = async (prompt, o) => (await ag(prompt, o)) || ag(prompt, { ...o, label: o.label + ':reintento' })
 const ESCALA = A.escala || 'media'
 if (!['rapida', 'media', 'completa'].includes(ESCALA)) throw new Error('comite-plan: escala debe ser rapida, media o completa')
 
@@ -116,7 +117,7 @@ const DICTAMEN = {
 }
 
 phase('Juez')
-let dictamen = await ag(`${CONTEXTO}
+let dictamen = await agFirme(`${CONTEXTO}
 
 Sos el juez del comité previo. Estas son las opiniones de cada ángulo:
 ${JSON.stringify(validas, null, 1)}

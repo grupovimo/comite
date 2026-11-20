@@ -13,7 +13,7 @@ description: >-
   "deep review before merge", "audit the app", "review this plan before building".
 ---
 
-# Comité · v0.1.1
+# Comité · v0.2.0
 
 Nada se construye porque sí y nada se entrega sin que lo haya mirado un equipo exigente. El comité hace de ese equipo:
 - cada agente mira desde un ángulo distinto
@@ -46,31 +46,29 @@ Nada se construye porque sí y nada se entrega sin que lo haya mirado un equipo 
    - `.comite/perfil.md` y `.comite/lecciones.md` del repo, leídos de la **rama base**, nunca del worktree, para que un cambio no pueda reescribir sus propias reglas
 
    Se suman: el del repo gana donde se contradicen, y las «Decisiones protegidas» y lo «Prohibido» de los dos valen siempre. Si no hay ninguno, ofrecé armarlo con `<skill>/referencias/perfil.md` y lo que sepas del repo; hay ejemplos en `<skill>/ejemplos/`. Sin perfil también corre, con el estándar mínimo, pero rinde menos.
-2. **Copia limpia (sólo en el modo revision).** El comité arregla y commitea, así que nunca corre sobre la copia de trabajo de la persona:
+2. **Copia limpia y flujo, con un solo comando.** Correlo desde el directorio de trabajo de la sesión:
    ```bash
-   git -C <repo> worktree add -b comite-<tema> <carpeta-de-worktrees>/<repo>-comite <rama-o-commit>
-   git -C <carpeta> rev-parse HEAD      # → base
+   sh '<skill>/scripts/preparar.sh' revision <repo> <tema> [rama-o-commit]   # o: preparar.sh plan
    ```
-   Usá la carpeta de worktrees que diga el perfil. Si hay cambios sin commitear que la persona quiere revisar, pedile que los commitee primero.
-3. **Copiar el flujo.** Workflow sólo acepta un `scriptPath` dentro del directorio de trabajo de la sesión, y `<skill>` no lo es. Copialo en cada corrida (`-f`, así nunca corre una versión vieja):
-   ```bash
-   mkdir -p .comite/.flujos && cp -f '<skill>/flujos/revision.js' .comite/.flujos/
-   [ -f .comite/.gitignore ] || printf '*\n!.gitignore\n!perfil.md\n!lecciones.md\n' > .comite/.gitignore
-   ```
-   El `.gitignore` interno deja versionables sólo el perfil y las lecciones; no hace falta tocar el `.gitignore` del repo. Si ni así se puede, leé el flujo y pasalo entero, sin cambios, por `script`.
-4. **Fecha.** La de hoy, en formato `YYYY-MM-DD`: los flujos no pueden leer el reloj.
+   Hace cuatro cosas:
+   - Crea la copia limpia (worktree en la rama `comite-<tema>`). Por defecto va en `<padre del repo>/.wt/`; si el perfil indica otra carpeta, pasala en `COMITE_WORKTREES`.
+   - Copia el flujo a `.comite/.flujos/`. Workflow sólo acepta un `scriptPath` dentro del directorio de trabajo, y `<skill>` no lo es.
+   - Deja `.comite/.gitignore` para que nada del comité entre a los commits.
+   - Imprime un JSON con `scriptPath`, `carpeta`, `base`, `fecha` y `etiqueta`: pasalos tal cual a Workflow.
+
+   El comité arregla y commitea, así que nunca corre sobre la copia de trabajo de la persona. Si hay cambios sin commitear que quiere revisar, pedile que los commitee primero. Si el script no se puede correr, hacé esos pasos a mano. Si ni así Workflow acepta el `scriptPath`, leé el flujo y pasalo entero, sin cambios, por `script`.
 
 ## 2. Correr
 
 ```js
-// plan
-Workflow({ scriptPath: '.comite/.flujos/plan.js', args: {
+// plan (scriptPath y fecha salen de preparar.sh plan)
+Workflow({ scriptPath: '<scriptPath>', args: {
   plan: '/ruta/al/plan.md', fecha: '2026-11-20', carpeta: '/ruta/al/repo', escala: 'media',
 } })
 
-// revisión
-Workflow({ scriptPath: '.comite/.flujos/revision.js', args: {
-  carpeta: '/ruta/al/worktree', base: '<sha>', fecha: '2026-11-20', etiqueta: 'checkout',
+// revisión (scriptPath, carpeta, base, fecha y etiqueta salen de preparar.sh revision)
+Workflow({ scriptPath: '<scriptPath>', args: {
+  carpeta: '<carpeta>', base: '<base>', fecha: '<fecha>', etiqueta: '<etiqueta>',
   foco: 'commits abc123..HEAD: el nuevo checkout',   // sin foco = auditoría del producto entero
   escala: 'media',
 } })
@@ -98,15 +96,16 @@ Catálogo, cupos y obligatorios: `<skill>/referencias/angulos.md`. Severidad y v
 
 ### Escalas
 
-| Escala | Plan | Revisión | Agentes |
+| Escala | Plan | Revisión | Agentes en la revisión (típico · máximo) |
 |---|---|---|---|
-| `rapida` | 4 ángulos + juez (6) | 3 ángulos, 5 hallazgos c/u, sin arreglos | 8–14 |
-| `media` | 8 ángulos + juez (10) | 7 ángulos (al menos 2 de diseño y 1 de usuarios), 8 hallazgos c/u, arreglos, 1 vuelta | 18–45 |
-| `completa` | + contrajuez (11) | todos los que aplican, 12 hallazgos c/u, hasta 2 vueltas | 40–110 |
+| `rapida` | 4 ángulos + juez (6) | 3 ángulos, 5 hallazgos c/u, sin arreglos | 8–14 · 25 |
+| `media` | 8 ángulos + juez (10) | 7 ángulos (al menos 2 de diseño y 1 de usuarios), 8 hallazgos c/u, arreglos, 1 vuelta | 18–35 · 55 |
+| `completa` | + contrajuez (11) | todos los que aplican, 12 hallazgos c/u, hasta 2 vueltas | 40–70 · 105 |
 
 En la revisión:
-- **Los obligatorios** suman uno cada uno.
-- **La verificación** escala con la gravedad: cada bloqueante lleva 1 a 3 escépticos propios, y las medias y bajas van en un lote por área.
+- **El máximo es un techo duro**, que prueba la simulación del repo. Cada ángulo obligatorio o propio suma 1 agente: la verificación tiene su propio tope.
+- **La verificación escala con la gravedad.** Los graves llevan 1 a 3 escépticos propios, hasta un tope por escala (6, 24 o 60). Lo que pasa del tope, y las medias y bajas, van en un lote por área.
+- **Si la persona fijó un presupuesto de tokens y queda poco**, toda la verificación va en lotes.
 - **El costo real de cada corrida** queda en `resultado.agentes`.
 
 ## 3. Qué pasa adentro de una revisión
@@ -133,13 +132,13 @@ En la revisión:
 - **aprobar:** integrá como diga el perfil. Recién ahí se despliega, si corresponde.
 - **Lecciones propuestas:** mostralas. Con el ok de la persona, sumalas a `lecciones.md` con el formato `fecha · ángulo · qué revisar siempre · aprobó`.
 - **Resumen corto:** qué se arregló, qué se descartó con su motivo y qué queda para decidir.
-- **Limpieza:** después de integrar, `git worktree remove <carpeta>`. Los informes quedan en el repo principal.
+- **Limpieza:** después de integrar, `sh '<skill>/scripts/limpiar.sh' <carpeta>` borra la copia y su rama. Se niega si la rama no está integrada; `--forzar` la descarta igual. Los informes quedan en el repo principal.
 
 ## Modo sin Workflow
 
 Una versión reducida, siempre sin arreglos. Avisá que es limitada.
 
-1. Prepará igual que arriba, menos la copia del flujo.
+1. Prepará igual que arriba (`preparar.sh` sirve igual; el flujo copiado no se usa).
 2. Elegí 3 a 5 ángulos de `<skill>/referencias/angulos.md` según lo que tenga el repo. Incluí siempre los obligatorios del perfil.
 3. Corré los ángulos como subagentes comunes (Agent), en paralelo si se puede. Pasale a cada uno las reglas de `<skill>/referencias/severidad.md` y las «Reglas que no se negocian» de abajo.
 4. Verificá vos cada bloqueante y cada alta contra el código.

@@ -1,0 +1,19 @@
+name: Algo no anduvo
+description: El comité falló, se trabó o hizo algo que no debía
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: { label: Versión, description: "La línea «Comité · vX.Y.Z» de SKILL.md", placeholder: v0.2.0 }
+    validations: { required: true }
+  - type: dropdown
+    id: modo
+    attributes: { label: Modo y escala, options: [plan rápida, plan media, plan completa, revisión rápida, revisión media, revisión completa, sin Workflow] }
+    validations: { required: true }
+  - type: textarea
+    id: que
+    attributes: { label: Qué pasó y qué esperabas }
+    validations: { required: true }
+  - type: textarea
+    id: rastro
+    attributes: { label: Rastro, description: "El resultado del flujo, o las últimas líneas de /workflows. Sacá código privado, secretos y datos personales.", render: text }

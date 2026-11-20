@@ -26,9 +26,9 @@ const WT = A.carpeta.replace(/\/+$/, '')
 const CAPT = WT + '/.comite/capturas/' + A.fecha
 
 const ESCALAS = {
-  rapida: { maxAngulos: 3, maxHallazgos: 5, votos: { bloqueante: 1 }, vueltas: 0, arreglar: false, cupos: { diseno: 1, usuarios: 0 } },
-  media: { maxAngulos: 7, maxHallazgos: 8, votos: { bloqueante: 3, alta: 1 }, vueltas: 1, arreglar: true, cupos: { diseno: 2, usuarios: 1 } },
-  completa: { maxAngulos: 99, maxHallazgos: 12, votos: { bloqueante: 3, alta: 3 }, vueltas: 2, arreglar: true, cupos: { diseno: 0, usuarios: 0 } },
+  rapida: { maxAngulos: 3, maxHallazgos: 5, maxVerificaciones: 6, votos: { bloqueante: 1 }, vueltas: 0, arreglar: false, cupos: { diseno: 1, usuarios: 0 } },
+  media: { maxAngulos: 7, maxHallazgos: 8, maxVerificaciones: 24, votos: { bloqueante: 3, alta: 1 }, vueltas: 1, arreglar: true, cupos: { diseno: 2, usuarios: 1 } },
+  completa: { maxAngulos: 99, maxHallazgos: 12, maxVerificaciones: 60, votos: { bloqueante: 3, alta: 3 }, vueltas: 2, arreglar: true, cupos: { diseno: 0, usuarios: 0 } },
 }
 const ESCALA = A.escala || 'media'
 const ESC = ESCALAS[ESCALA]
@@ -40,6 +40,9 @@ const ALCANCE = A.alcance || (A.foco ? 'cambios' : 'todo')
 // Cuenta agentes por fase para el informe.
 const gasto = {}
 const ag = (prompt, o) => { gasto[o.phase] = (gasto[o.phase] || 0) + 1; return agent(prompt, o) }
+// Los pasos sin los que no hay corrida se reintentan una vez.
+const agFirme = async (prompt, o) => (await ag(prompt, o)) || ag(prompt, { ...o, label: o.label + ':reintento' })
+const presupuestoCorto = () => !!(budget && budget.total) && budget.remaining() < 150000
 
 const esRuta = v => !v.includes('\n') && v.length < 400 && /^[~/.]/.test(v)
 const fuente = v => esRuta(v) ? `Leé entero ${v}.` : `Contenido:\n${v}`
@@ -124,9 +127,9 @@ const areaDe = h => /\.(swift|kt|kts)\b/.test(h.donde) ? 'apps' : (AREAS.include
 phase('Mapa')
 const SUPERFICIES = ['web', 'web-publica', 'interfaz', 'diseno-de-referencia', 'ios', 'android', 'api', 'base-de-datos', 'pagos', 'ia', 'datos-personales', 'tareas-programadas']
 const baseProvisoria = A.base || 'HEAD'
-const mapa = await ag(`${contexto(baseProvisoria)}
+const mapa = await agFirme(`${contexto(baseProvisoria)}
 
-Sos quien prepara el comité. Explorá ${WT} sin modificar nada del producto (estructura, README, perfil, lecciones, git log${A.foco ? ', y el foco' : ''}). Tu única escritura: si no existe, creá ${WT}/.comite/.gitignore con estas cuatro líneas: «*», «!.gitignore», «!perfil.md», «!lecciones.md». Devolvé:
+Sos quien prepara el comité. Explorá ${WT} sin modificar nada del producto (estructura, README, perfil, lecciones, git log${A.foco ? ', y el foco' : ''}). Tu única escritura: si no existe, creá ${WT}/.comite/.gitignore con una sola línea, «*», para que nada del comité entre a los commits. Devolvé:
 - base: ${A.base ? `exactamente ${A.base}` : `el SHA completo de HEAD (git -C ${WT} rev-parse HEAD)`}.
 - repoPrincipal: la carpeta del repo principal, aunque ${WT} sea un worktree: dirname de \`git -C ${WT} rev-parse --path-format=absolute --git-common-dir\`.
 - resumen: qué es el producto y su stack, en 3 o 4 líneas.
@@ -297,7 +300,7 @@ ${JSON.stringify(crudos, null, 1)}`, {
           required: ['hallazgos', 'conflictos'],
         },
       })
-      unicos = (dd ? dd.hallazgos : crudos).map(h => ({ ...h, area: areaDe(h) }))
+      unicos = (dd && dd.hallazgos.length ? dd.hallazgos : crudos).map(h => ({ ...h, area: areaDe(h) }))
       conflictos = dd ? dd.conflictos : []
       log(`Deduplicado: ${unicos.length} hallazgos, ${conflictos.length} conflictos`)
     }
@@ -323,8 +326,16 @@ ${JSON.stringify(crudos, null, 1)}`, {
       return { ...h, severidad: sev, arreglo: critica ? critica.arregloCorregido : h.arreglo, votos: `${si.length}/${v.length}` }
     }
     const verificar = `Sos un revisor escéptico. Intentá REFUTAR, contra el código y el producto reales (leé, corré lo necesario, sin modificar el repo${enVivo ? `; la instancia de ${instancia.url} está a tu disposición, no la reinicies` : ''}). Si el hallazgo trae capturas, abrilas primero. Si no podés comprobar que existe, existe=false. Si existe, ajustá la severidad con justicia; si el arreglo no sirve, existe sigue en true y corregís el arreglo.`
-    const individuales = unicos.filter(h => ESC.votos[h.severidad])
-    const enLote = unicos.filter(h => !ESC.votos[h.severidad])
+    // Votos propios para lo grave, hasta el tope de la escala; el resto va en lotes por área.
+    let cupo = presupuestoCorto() ? 0 : ESC.maxVerificaciones
+    if (!cupo) log('Presupuesto de tokens corto: toda la verificación va en lotes')
+    const individuales = [], enLote = []
+    for (const h of unicos.slice().sort((a, b) => ORDEN(a.severidad) - ORDEN(b.severidad))) {
+      const n = ESC.votos[h.severidad] || 0
+      if (n && n <= cupo) { individuales.push(h); cupo -= n } else enLote.push(h)
+    }
+    const aLote = enLote.filter(h => ESC.votos[h.severidad]).length
+    if (aLote) log(`Tope de ${ESC.maxVerificaciones} verificaciones propias: ${aLote} hallazgos graves se verifican en lote`)
     const lotes = AREAS.map(area => enLote.filter(h => h.area === area)).filter(l => l.length)
 
     const juicios = (await parallel([
@@ -339,7 +350,7 @@ ${JSON.stringify(h, null, 1)}`, { label: `verifica:${h.severidad}:${i + 1}${ESC.
 
 ${DATOS_MAPA}
 
-${verificar} Son ${lote.length} hallazgos de severidad media o baja del área «${lote[0].area}»: devolvé un voto por cada uno, con su índice.
+${verificar} Son ${lote.length} hallazgos del área «${lote[0].area}»: devolvé un voto por cada uno, con su índice.
 ${JSON.stringify(lote.map((h, i) => ({ indice: i, ...h })), null, 1)}`, {
         label: 'verifica-lote:' + lote[0].area, phase: 'Verificar', schema: {
           type: 'object',

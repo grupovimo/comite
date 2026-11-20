@@ -1,6 +1,6 @@
 {
   "name": "comite",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Comité de agentes que revisa planes antes de construir y cambios antes de entregar, como un estudio de primer nivel.",
   "author": { "name": "Grupo Vimo", "url": "https://github.com/grupovimo" },
   "homepage": "https://github.com/grupovimo/comite",

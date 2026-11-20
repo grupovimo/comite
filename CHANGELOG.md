@@ -1,5 +1,13 @@
 # Cambios
 
+## 0.2.0 — 2026-11-20
+- `scripts/preparar.sh`: crea la copia limpia, copia el flujo y deja el `.gitignore` en un solo paso, e imprime los argumentos para Workflow. `scripts/limpiar.sh` borra la copia y su rama sólo si ya está integrada.
+- Techo duro de agentes por escala (25, 55 y 105 en el peor caso), comprobado en la simulación. La verificación individual tiene su propio tope y el resto va en lotes.
+- Si hay un presupuesto de tokens y queda poco, toda la verificación va en lotes.
+- El mapa y el juez se reintentan una vez si no devuelven nada. Si la deduplicación devuelve vacío, se usan los hallazgos crudos.
+- En la copia limpia se ignora todo `.comite/`, así nada del comité entra a los commits.
+- Plantillas de issues.
+
 ## 0.1.1 — 2026-11-20
 - El instalador remoto fallaba en algunos shells (`Bajando comite $REF…`). Ahora el CI prueba también la instalación remota.
 

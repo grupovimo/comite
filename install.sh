@@ -2,7 +2,7 @@
 # Instala la skill «comite» para Claude Code.
 #   curl -fsSL https://raw.githubusercontent.com/grupovimo/comite/main/install.sh | sh
 #   … | sh -s -- --proyecto        sólo en el repo actual (.claude/skills)
-#   COMITE_REF=v0.1.1 … | sh       una versión fija (por defecto, la última publicada)
+#   COMITE_REF=v0.2.0 … | sh       una versión fija (por defecto, la última publicada)
 set -eu
 REPO="${COMITE_REPO:-grupovimo/comite}"
 DESTINO="$HOME/.claude/skills"

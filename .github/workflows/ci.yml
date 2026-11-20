@@ -16,6 +16,8 @@ jobs:
           node-version: 22
       - name: Simulación de los flujos
         run: node pruebas/simular.mjs
+      - name: Scripts de preparar y limpiar
+        run: sh pruebas/scripts.sh
       - name: Manifiestos del plugin
         run: |
           node -e "for (const f of ['.claude-plugin/plugin.json','.claude-plugin/marketplace.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"

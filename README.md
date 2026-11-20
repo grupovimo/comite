@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/grupovimo/comite/main/install.sh | 
 ```
 - Queda en `~/.claude/skills/comite`.
 - `… | sh -s -- --proyecto` lo instala sólo en el repo actual.
-- `COMITE_REF=v0.1.1` fija una versión.
+- `COMITE_REF=v0.2.0` fija una versión.
 - Si ya había una instalación, se guarda como `comite.bak`.
 
 También está el `comite.zip` de [Releases](https://github.com/grupovimo/comite/releases), para descomprimir en `~/.claude/skills/`.
@@ -59,7 +59,7 @@ En Claude Code, con tus palabras:
 > Revisá con el comité los cambios de hoy antes de mergear.
 > Auditá la app entera con el comité, escala completa.
 
-Claude arma la copia limpia, corre el flujo, lee el informe y te trae el veredicto, lo que tenés que decidir y las lecciones propuestas. Integrar y desplegar queda en tus manos.
+Claude arma la copia limpia con `scripts/preparar.sh`, corre el flujo, lee el informe y te trae el veredicto, lo que tenés que decidir y las lecciones propuestas. Integrar y desplegar queda en tus manos.
 
 ## Hacelo tuyo: el perfil
 
@@ -78,14 +78,15 @@ Al lado del perfil va `.comite/lecciones.md`. Cada informe propone lecciones («
 
 ## Escalas y costo
 
-| Escala | Plan | Revisión | Agentes |
+| Escala | Plan | Revisión | Agentes en la revisión (típico · máximo) |
 |---|---|---|---|
-| `rapida` | 4 ángulos + juez | 3 ángulos, sin arreglos | 6 / 8–14 |
-| `media` | 8 ángulos + juez | 7 ángulos, arreglos, 1 vuelta de control | 10 / 18–45 |
-| `completa` | + contrajuez | todos los que aplican, hasta 2 vueltas | 11 / 40–110 |
+| `rapida` | 4 ángulos + juez | 3 ángulos, sin arreglos | 8–14 · 25 |
+| `media` | 8 ángulos + juez | 7 ángulos, arreglos, 1 vuelta de control | 18–35 · 55 |
+| `completa` | + contrajuez | todos los que aplican, hasta 2 vueltas | 40–70 · 105 |
 
-- **Topes:** cada ángulo tiene un máximo de hallazgos (5, 8 o 12).
-- **Verificación:** los bloqueantes se verifican con hasta tres escépticos cada uno; las medias y bajas van en lotes por área.
+- **El máximo es un techo duro**, y lo comprueba la simulación del repo en cada cambio. Cada ángulo obligatorio suma 1 agente.
+- **Topes:** cada ángulo tiene un máximo de hallazgos (5, 8 o 12) y la verificación individual tiene el suyo; el resto se verifica en lotes por área.
+- **Presupuesto:** si fijaste uno de tokens y queda poco, toda la verificación pasa a lotes.
 - **Costo real:** el informe dice cuántos agentes usó cada fase.
 
 Una revisión `completa` de un producto mediano puede llevar una hora y varios millones de tokens. Empezá por `rapida`.
@@ -109,10 +110,12 @@ skills/comite/
   flujos/revision.js       comité posterior
   referencias/             ángulos, severidad y veredicto, plantilla de perfil, forma del informe
   ejemplos/                perfiles de ejemplo
-pruebas/simular.mjs        recorre los flujos con agentes simulados: node pruebas/simular.mjs
+  scripts/                 preparar.sh (copia limpia + flujo) y limpiar.sh
+pruebas/simular.mjs        recorre los flujos con agentes simulados, peor caso incluido
+pruebas/scripts.sh         prueba preparar.sh y limpiar.sh en un repo desechable
 ```
 
-Las contribuciones son bienvenidas. Antes de abrir un PR, corré `node pruebas/simular.mjs`. Es un proyecto que se mantiene en lo que da el tiempo, sin soporte garantizado.
+Las contribuciones son bienvenidas. Antes de abrir un PR, corré `node pruebas/simular.mjs && sh pruebas/scripts.sh`. Es un proyecto que se mantiene en lo que da el tiempo, sin soporte garantizado.
 
 ## English summary
 
