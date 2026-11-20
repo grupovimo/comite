@@ -24,8 +24,13 @@ jobs:
       - name: Nada privado en el repo
         run: |
           ! grep -rnE '/Users/|/home/[a-z]+/|sk_live_|sk-ant-|APP_USR-|BEGIN (RSA|OPENSSH) PRIVATE KEY' --exclude-dir=.git --exclude=ci.yml --exclude=perfil-saas-web.md --exclude=severidad.md --exclude=revision.js .
-      - name: Instalación limpia
+      - name: Instalación limpia desde un clon
         run: HOME="$RUNNER_TEMP/casa" sh install.sh && test -f "$RUNNER_TEMP/casa/.claude/skills/comite/flujos/revision.js"
+      - name: Instalación remota, como desde el README
+        run: |
+          cat install.sh | HOME="$RUNNER_TEMP/remota" COMITE_REF="$GITHUB_SHA" sh
+          test -f "$RUNNER_TEMP/remota/.claude/skills/comite/flujos/revision.js"
+          cat install.sh | HOME="$RUNNER_TEMP/remota" COMITE_REF="$GITHUB_SHA" sh | grep -q "comite.bak"
   release:
     needs: pruebas
     if: startsWith(github.ref, 'refs/tags/v')

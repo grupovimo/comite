@@ -2,7 +2,7 @@
 # Instala la skill «comite» para Claude Code.
 #   curl -fsSL https://raw.githubusercontent.com/grupovimo/comite/main/install.sh | sh
 #   … | sh -s -- --proyecto        sólo en el repo actual (.claude/skills)
-#   COMITE_REF=v0.1.0 … | sh       una versión fija (por defecto, la última publicada)
+#   COMITE_REF=v0.1.1 … | sh       una versión fija (por defecto, la última publicada)
 set -eu
 REPO="${COMITE_REPO:-grupovimo/comite}"
 DESTINO="$HOME/.claude/skills"
@@ -20,7 +20,7 @@ else
     REF="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
     [ -n "$REF" ] || REF=main
   fi
-  echo "Bajando comite $REF…"
+  echo "Bajando comite ${REF}…"
   curl -fsSL "https://github.com/$REPO/archive/$REF.tar.gz" | tar -xz -C "$TMP"
   ORIGEN="$(find "$TMP" -maxdepth 3 -type d -path '*/skills/comite' | head -1)"
 fi

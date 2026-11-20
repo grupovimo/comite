@@ -1,5 +1,8 @@
 # Cambios
 
+## 0.1.1 — 2026-11-20
+- El instalador remoto fallaba en algunos shells (`Bajando comite $REF…`). Ahora el CI prueba también la instalación remota.
+
 ## 0.1.0 — 2026-11-20
 
 Primera versión pública.

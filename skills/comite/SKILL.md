@@ -13,7 +13,7 @@ description: >-
   "deep review before merge", "audit the app", "review this plan before building".
 ---
 
-# Comité · v0.1.0
+# Comité · v0.1.1
 
 Nada se construye porque sí y nada se entrega sin que lo haya mirado un equipo exigente. El comité hace de ese equipo:
 - cada agente mira desde un ángulo distinto

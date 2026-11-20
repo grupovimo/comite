@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/grupovimo/comite/main/install.sh | 
 ```
 - Queda en `~/.claude/skills/comite`.
 - `… | sh -s -- --proyecto` lo instala sólo en el repo actual.
-- `COMITE_REF=v0.1.0` fija una versión.
+- `COMITE_REF=v0.1.1` fija una versión.
 - Si ya había una instalación, se guarda como `comite.bak`.
 
 También está el `comite.zip` de [Releases](https://github.com/grupovimo/comite/releases), para descomprimir en `~/.claude/skills/`.
