@@ -1,0 +1,44 @@
+name: ci
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Simulación de los flujos
+        run: node pruebas/simular.mjs
+      - name: Manifiestos del plugin
+        run: |
+          node -e "for (const f of ['.claude-plugin/plugin.json','.claude-plugin/marketplace.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          v=$(node -p "require('./.claude-plugin/plugin.json').version")
+          grep -q "v$v" skills/comite/SKILL.md || { echo "SKILL.md no dice v$v"; exit 1; }
+      - name: Nada privado en el repo
+        run: |
+          ! grep -rnE '/Users/|/home/[a-z]+/|sk_live_|sk-ant-|APP_USR-|BEGIN (RSA|OPENSSH) PRIVATE KEY' --exclude-dir=.git --exclude=ci.yml --exclude=perfil-saas-web.md --exclude=severidad.md --exclude=revision.js .
+      - name: Instalación limpia
+        run: HOME="$RUNNER_TEMP/casa" sh install.sh && test -f "$RUNNER_TEMP/casa/.claude/skills/comite/flujos/revision.js"
+  release:
+    needs: pruebas
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paquete
+        run: |
+          cd skills && zip -qr ../comite.zip comite && cd ..
+          shasum -a 256 comite.zip | tee comite.zip.sha256
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" comite.zip comite.zip.sha256 --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md

@@ -1,0 +1,14 @@
+{
+  "name": "comite",
+  "owner": { "name": "Grupo Vimo", "url": "https://github.com/grupovimo" },
+  "metadata": { "description": "Comité de agentes para Claude Code" },
+  "plugins": [
+    {
+      "name": "comite",
+      "source": "./",
+      "description": "Comité de agentes que revisa planes antes de construir y cambios antes de entregar, como un estudio de primer nivel.",
+      "version": "0.1.0",
+      "license": "MIT"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+.comite/informes/
+.comite/capturas/
+node_modules/
+*.zip
+.DS_Store
+.comite/.flujos/
+.comite/
